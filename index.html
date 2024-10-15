@@ -1,0 +1,188 @@
+<html><head><base href="https://gerador-cupom-fiscal-editavel.web.app/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Cupom Fiscal Editável</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  body {
+    font-family: 'Courier New', monospace;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  
+  #app-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 600px;
+  }
+  
+  #cupom-container {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 20px;
+    white-space: pre-wrap;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+  
+  #cupom-container input {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    width: calc(100% - 10px);
+    margin: 2px 0;
+  }
+  
+  #controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  button {
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    flex-grow: 1;
+  }
+  
+  button:hover {
+    background-color: #45a049;
+  }
+
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    #cupom-container, #cupom-container * {
+      visibility: visible;
+    }
+    #cupom-container {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app-container">
+  <div id="cupom-container">
+    <input type="text" id="loja" placeholder="Nome da Loja" value="Supermercado Exemplo">
+    <input type="text" id="data" placeholder="Data">
+    <input type="text" id="hora" placeholder="Hora">
+    -------------------------------
+    CUPOM FISCAL
+    -------------------------------
+    <div id="itens"></div>
+    -------------------------------
+    <input type="text" id="total" placeholder="TOTAL R$" readonly>
+    -------------------------------
+    <input type="text" id="mensagem" placeholder="Mensagem de agradecimento" value="Obrigado e volte sempre!">
+  </div>
+  <div id="controls">
+    <button onclick="adicionarItem()">Adicionar Item</button>
+    <button onclick="calcularTotal()">Calcular Total</button>
+    <button onclick="imprimirCupom()">Imprimir</button>
+    <button onclick="gerarPDF()">Gerar PDF</button>
+  </div>
+</div>
+
+<script>
+function adicionarItem() {
+  const itensDiv = document.getElementById('itens');
+  const novoItem = document.createElement('div');
+  novoItem.innerHTML = `
+    <input type="text" placeholder="Nome do produto" class="produto">
+    <input type="number" placeholder="Quantidade" class="quantidade" min="1" value="1">
+    <input type="number" placeholder="Preço unitário" class="preco" step="0.01" min="0">
+    <input type="text" placeholder="Subtotal" class="subtotal" readonly>
+  `;
+  itensDiv.appendChild(novoItem);
+}
+
+function calcularTotal() {
+  let total = 0;
+  const itens = document.getElementById('itens').children;
+  for (let item of itens) {
+    const quantidade = parseFloat(item.querySelector('.quantidade').value) || 0;
+    const preco = parseFloat(item.querySelector('.preco').value) || 0;
+    const subtotal = quantidade * preco;
+    item.querySelector('.subtotal').value = subtotal.toFixed(2);
+    total += subtotal;
+  }
+  document.getElementById('total').value = total.toFixed(2);
+}
+
+function imprimirCupom() {
+  window.print();
+}
+
+function gerarPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({
+    unit: 'mm',
+    format: [80, 297] // Largura típica de um cupom fiscal
+  });
+
+  doc.setFontSize(10);
+  doc.setFont('courier', 'normal');
+
+  let yPos = 10;
+  const lineHeight = 5;
+
+  function addLine(text) {
+    doc.text(text, 5, yPos);
+    yPos += lineHeight;
+  }
+
+  addLine(document.getElementById('loja').value);
+  addLine(document.getElementById('data').value);
+  addLine(document.getElementById('hora').value);
+  addLine('-------------------------------');
+  addLine('CUPOM FISCAL');
+  addLine('-------------------------------');
+
+  const itens = document.getElementById('itens').children;
+  for (let item of itens) {
+    const produto = item.querySelector('.produto').value;
+    const quantidade = item.querySelector('.quantidade').value;
+    const preco = item.querySelector('.preco').value;
+    const subtotal = item.querySelector('.subtotal').value;
+
+    addLine(produto);
+    addLine(`${quantidade} x R$ ${preco} = R$ ${subtotal}`);
+  }
+
+  addLine('-------------------------------');
+  addLine(`TOTAL: R$ ${document.getElementById('total').value}`);
+  addLine('-------------------------------');
+  addLine(document.getElementById('mensagem').value);
+
+  doc.save('cupom_fiscal.pdf');
+}
+
+// Preencher data e hora atual
+const agora = new Date();
+document.getElementById('data').value = agora.toLocaleDateString('pt-BR');
+document.getElementById('hora').value = agora.toLocaleTimeString('pt-BR');
+
+// Adicionar um item inicial
+adicionarItem();
+</script>
+</body>
+</html>
